@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ReSwift DevTool Client</title>
+    <script src="/jquery.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      var socket = io('http://localhost:9000');
+      var actions = [];
+      var currentAction = 0;
+
+      socket.on('allActions', function(data) {
+        actions = data;
+        updateActionDisplay();
+      });
+
+      socket.on('setCurrentAction', function(data) {
+        currentAction = data;
+        $('#current-action').text(currentAction);
+        $('#timeline').val('' + currentAction);
+      });
+
+      socket.on('appendAction', function(action) {
+        actions.push(action);
+        updateActionDisplay();
+      });
+
+      socket.on('reset', function() {
+        currentAction = 0;
+        actions = [];
+        updateActionDisplay();
+      });
+
+      socket.on('connect', function() {
+        socket.emit('clientId', true);
+      });
+      socket.connect();
+
+      function updateActionDisplay() {
+        $('#timeline').prop({max: actions.length}).val('' + currentAction);
+        $('#current-action').text(currentAction);
+        $('#action-count').text(actions.length);
+        $('#actions').html(actions.map(actionToHtml));
+      }
+
+      function actionToHtml(action, index) {
+        return "<li>" +
+            "<p><strong class='" + action.action.type + "'>" + action.action.type +
+            "</strong>&nbsp;&nbsp;&nbsp;&nbsp;" + index + " <span>(" + action.timestamp + ")</span></p>" +
+            "<pre>" + JSON.stringify(action.action.payload, null, '  ') + "</pre>" +
+        "</li>";
+      }
+
+      $(function() {
+
+          $('#timeline').change(function(event) {
+            currentAction = $('#timeline').val();
+            socket.emit('setCurrentAction', currentAction);
+            updateActionDisplay();
+          });
+
+          $('#reset').click(function(event) {
+            socket.emit('reset');
+          });
+      });
+
+    </script>
+    <style>
+    body {
+        font: 16px/1.5 sans-serif;
+    }
+    input[type=range] {
+        display: block;
+        width: 100%;
+        padding: 0;
+        margin: 30px 0 10px;
+    }
+    .container {
+        padding: 150px 0 100px;
+        max-width: 940px;
+        margin: 0 auto;
+    }
+    .clearfix {
+        clear: both;
+    }
+    .control {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: #f9f9f9;
+        border-bottom: 1px solid #ccc;
+    }
+    .control-inner {
+        max-width: 940px;
+        margin: 0 auto;
+    }
+    .left {
+        float: left;
+        margin-right: 20px;
+    }
+    .right {
+        float: right;
+        margin-left: 20px;
+    }
+    .actions {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+    .actions > li {
+        margin: 0;
+        padding: 0;
+        border: 1px solid #eee;
+    }
+    .actions p {
+        margin: 0 0 10px;
+        padding: 10px;
+        background: #f9f9f9;
+        border-bottom: 1px solid #eee;
+    }
+    .actions pre {
+        margin: 0;
+        padding: 10px;
+        font-size: 12px;
+    }
+    .actions strong {
+    }
+    .actions span {
+        float: right;
+    }
+    .FeedAction {
+        color: #909;
+    }
+    .UserAction {
+        color: #099;
+    }
+    .RouteAction {
+        color: #090;
+    }
+    button {
+        margin: 0;
+        padding: 5px 20px;
+        border: none;
+        color: #fff;
+        background: #969;
+        font: inherit;
+        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5);
+    }
+    button:hover {
+        background: #909;
+    }
+    input:focus,
+    button:focus, button:active {
+        outline: 2px dashed #099;
+    }
+    </style>
+</head>
+<body>
+<div class='control'>
+    <div class='control-inner'>
+        <input type='range'
+            id='timeline'
+            min='0'
+            max='0'
+            value='0'
+            step='1'>
+        <div class='status'>
+            <p class='left'><button id='reset'>Reset</button></p>
+            <p class='right'>Action count: <span id='action-count'>-</span></p>
+            <p class='right'>Current action: <span id='current-action'>-</span></p>
+            <div class='clearfix'></div>
+        </div>
+    </div>
+</div>
+<div class='container'>
+    <ul id='actions' class='actions'>
+    </ul>
+</div>
+</body>
+</html>
